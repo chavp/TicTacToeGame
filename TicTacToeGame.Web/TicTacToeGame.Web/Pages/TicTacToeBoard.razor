@@ -1,0 +1,124 @@
+﻿@page "/tictactoe"
+
+<PageTitle>TicTacToe Game</PageTitle>
+
+
+@using TicTacToeGame.Web.ViewModels
+@inject TicTacToeBoardVm GameVm
+
+<div class="container">
+    <div class="row">
+        <div role="status">
+            <span class="badge m-1 @((GameVm.CurrentPlayer == 1)?"bg-success":"bg-danger")">Player</span>
+            @if (GameVm.Done)
+            {
+                <span>Win!</span>
+            }
+            else if (!GameVm.CanPlay)
+            {
+                <span>No the winner</span>
+            }
+        </div>
+    </div>
+    <div class="row">
+        @foreach (var square in GameVm.Squares.Take(3))
+        {
+            var theSq = square;
+            <div class="square m-1 btn @theSq.Color @theSq.Disabled" @onclick="()=>PlayAsync(theSq)" />
+        }
+    </div>
+    <div class="row">
+        @foreach (var square in GameVm.Squares.Skip(3).Take(3))
+        {
+            var theSq = square;
+            <div class="square m-1 btn @theSq.Color @theSq.Disabled" @onclick="()=>PlayAsync(theSq)" />
+        }
+    </div>
+    <div class="row">
+        @foreach (var square in GameVm.Squares.Skip(6).Take(3))
+        {
+            var theSq = square;
+            <div class="square m-1 btn @theSq.Color @theSq.Disabled" @onclick="()=>PlayAsync(theSq)" />
+        }
+    </div>
+    <button class="btn btn-primary" @onclick="NewGameAsync">New game</button>
+
+    <div class="row">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th scope="col">XWinPercent</th>
+                    <th scope="col">OWinPercent</th>
+                    <th scope="col">DrawPercent</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>@_XWinPercent.ToString("#0.00")%</td>
+                    <td>@_OWinPercent.ToString("#0.00")%</td>
+                    <td>@_DrawPercent.ToString("#0.00")%</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    private bool _playWithAi = true;
+    private decimal _XWinPercent;
+    private decimal _OWinPercent;
+    private decimal _DrawPercent;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await NewGameAsync();
+    }
+
+    private async Task PlayAsync(Square selected)
+    {
+        await GameVm.GetNextAsync(selected);
+        if (GameVm.CanPlay)
+        {
+            GameVm.TogglePlayer();
+
+            // play with random AI
+            if (_playWithAi)
+            {
+                await GameVm.GetNextAsync();
+                if (GameVm.CanPlay)
+                {
+                    GameVm.TogglePlayer();
+                }
+            }
+        }
+        updateStat();
+        StateHasChanged();
+    }
+
+    private void updateStat()
+    {
+        _XWinPercent = GameVm.GameStat.XWinPercent;
+        _OWinPercent = GameVm.GameStat.OWinPercent;
+        _DrawPercent = GameVm.GameStat.DrawPercent;
+
+
+    }
+
+    Random _ran = new Random();
+    private async Task NewGameAsync()
+    {
+        await GameVm.ResetAsync();
+        if (_playWithAi)
+        {
+            // random first play
+            if (_ran.Next(0, 2) == 0)
+            {
+                GameVm.TogglePlayer();
+                await GameVm.GetNextAsync();
+                GameVm.TogglePlayer();
+            }
+        }
+        updateStat();
+        StateHasChanged();
+    }
+}
